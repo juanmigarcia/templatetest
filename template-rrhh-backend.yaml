@@ -1,0 +1,233 @@
+apiVersion: v1
+kind: Template
+metadata:
+  labels:
+    app: rrhh-backend-template
+    group: dxc-iberianextgen
+  name: rrhh-backend-template
+objects:
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      app: ${APP_NAME}
+    name: ${APP_NAME}
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    labels:
+      app: ${APP_NAME}
+    name: ${APP_NAME}
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: ${APP_NAME}:${IMAGE_TAG}
+    postCommit: {}
+    resources: {}
+    runPolicy: Serial
+    source:      
+      type: Git
+      git:
+        uri: ${GIT_URL}
+        ref: ${GIT_BRANCH}
+      contextDir: ${CONTEXT_DIR}
+      sourceSecret:
+        name: ${SOURCE_SECRET}
+    strategy:
+      sourceStrategy:
+        from:
+          kind: ImageStreamTag
+          name: ${BUILDER_IMAGE}
+          namespace: ${NAMESPACE}
+      type: Source
+    triggers: []
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: ${APP_NAME}
+    name: ${APP_NAME}
+  spec:
+    replicas: 1
+    selector:
+      app: ${APP_NAME}
+    strategy:
+      activeDeadlineSeconds: 21600
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 10800
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        labels:
+          app: ${APP_NAME}
+      spec:
+        containers:
+        - env:
+          - name: ENTORNO
+            value: PRE
+          - name: API_GATEWAY
+            value: http://kong-proxy-gatewaypre.apps.ferrovial-ocp.net            
+          - name: REDIS_HOST
+            value: redis
+          - name: REDIS_PORT
+            value: '6379'
+          - name: REDIS_ADMIN_PASS
+            valueFrom:
+              secretKeyRef:
+                key: password
+                name: redis-access-admin
+          - name: REDIS_PASS
+            valueFrom:
+              secretKeyRef:
+                key: database-password
+                name: redis
+          image: ${APP_NAME}
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: 8081
+              scheme: HTTP
+            initialDelaySeconds: 180
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: spring-boot
+          ports:
+          - containerPort: 8082
+            name: http
+            protocol: TCP
+          - containerPort: 8081
+            name: prometheus
+            protocol: TCP
+          - containerPort: 8778
+            name: jolokia
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: 8081
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            limits:
+              cpu: ${CPU_LIMIT}
+              memory: ${MEMORY_LIMIT}
+            requests:
+              cpu: ${CPU_REQUEST}
+              memory: ${MEMORY_REQUEST}
+          securityContext:
+            privileged: false
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers:
+    - type: ConfigChange
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - spring-boot
+        from:
+          kind: ImageStreamTag
+          name: ${APP_NAME}:${IMAGE_TAG}
+      type: ImageChange
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: ${APP_NAME}
+      expose: 'true'
+    name: ${APP_NAME}
+  spec:
+    ports:
+    - name: http
+      port: 8082
+      protocol: TCP
+      targetPort: 8082
+    - name: prometheus
+      port: 8081
+      protocol: TCP
+      targetPort: 8081
+    selector:
+      app: ${APP_NAME}
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+parameters:        
+- description: Name of the application. It will also be added as app=name label to
+    all the objects created by this template
+  displayName: Application name
+  name: APP_NAME
+  required: true
+- description: Tag associated to the image that is going to be created by the build
+    process
+  displayName: Image tag
+  name: IMAGE_TAG
+  required: true
+  value: latest
+- description: The OpenShift Namespace where the ImageStream resides.
+  displayName: Namespace
+  name: NAMESPACE
+  required: true
+  value: openshift
+- description: Builder image used by the build process
+  displayName: Builder image
+  name: BUILDER_IMAGE
+  required: true
+  value: fis-java-openshift:2.0
+- description: Url repository.
+  displayName: Url repository.
+  name: GIT_URL
+  value: 'https://github.dxc.com/Ferrovial/rrhh-backend.git'
+  required: true
+- description: Branch repository.
+  displayName: Branch repository.
+  name: GIT_BRANCH
+  required: true
+- description: Context dirextory branch.
+  displayName: Context dirextory.
+  name: CONTEXT_DIR
+  value: '/backendRest'
+  required: true  
+- description: Credentials repository.
+  displayName: Source secret.
+  name: SOURCE_SECRET
+  value: 'github-dxc'
+  required: true
+- description: Amount of memory requested by the container.
+  displayName: Memory request
+  name: MEMORY_REQUEST
+  required: true
+  value: 512Mi
+- description: Maximum amount of memory the container can use.
+  displayName: Memory Limit
+  name: MEMORY_LIMIT
+  required: true
+  value: 512Mi
+- description: Amount of CPU requested by the container.
+  displayName: CPU request
+  name: CPU_REQUEST
+  required: true
+  value: 200m
+- description: Maximum amount of cpu the container can use.
+  displayName: CPU Limit
+  name: CPU_LIMIT
+  required: true
+  value: '1'
