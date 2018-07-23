@@ -175,6 +175,7 @@ parameters:
     all the objects created by this template
   displayName: Application name
   name: APP_NAME
+  value: rrhh-backend-jenkins
   required: true
 - description: Tag associated to the image that is going to be created by the build
     process
@@ -201,6 +202,7 @@ parameters:
   displayName: Branch repository.
   name: GIT_BRANCH
   required: true
+  value: develop-dxc
 - description: Context dirextory branch.
   displayName: Context dirextory.
   name: CONTEXT_DIR
