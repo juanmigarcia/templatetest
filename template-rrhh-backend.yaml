@@ -3,6 +3,7 @@ kind: Template
 metadata:
   labels:
     app: rrhh-backend-template
+    template: rrhh-backend-template
     group: dxc-iberianextgen
   name: rrhh-backend-template
 objects:
