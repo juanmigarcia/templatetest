@@ -6,6 +6,10 @@ metadata:
     template: rrhh-backend-jenkins
     group: dxc-iberianextgen
   name: rrhh-backend-jenkins
+labels:
+  app: rrhh-backend-jenkins
+  template: rrhh-backend-jenkins
+  group: dxc-iberianextgen
 objects:
 - apiVersion: v1
   kind: ImageStream
