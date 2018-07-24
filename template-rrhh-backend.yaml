@@ -2,10 +2,10 @@ apiVersion: v1
 kind: Template
 metadata:
   labels:
-    app: rrhh-backend-template
-    template: rrhh-backend-template
+    app: rrhh-backend-jenkins
+    template: rrhh-backend-jenkins
     group: dxc-iberianextgen
-  name: rrhh-backend-template
+  name: rrhh-backend-jenkins
 objects:
 - apiVersion: v1
   kind: ImageStream
