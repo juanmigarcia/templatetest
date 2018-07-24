@@ -19,6 +19,9 @@ objects:
     labels:
       app: ${APP_NAME}
     name: ${APP_NAME}
+    annotations:
+      description: "Defines how to build the application"
+      template.alpha.openshift.io/wait-for-ready: "true"
   spec:
     output:
       to:
@@ -166,7 +169,7 @@ objects:
       protocol: TCP
       targetPort: 8081
     selector:
-      app: ${APP_NAME}
+      name: ${APP_NAME}
     sessionAffinity: None
     type: ClusterIP
   status:
